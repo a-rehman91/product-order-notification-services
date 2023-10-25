@@ -1,6 +1,11 @@
 package com.ms.inventory.service.services;
 
+import com.ms.inventory.service.dto.InventoryResponse;
+import com.ms.inventory.service.model.Inventory;
+
+import java.util.List;
+
 public interface InventoryService {
 
-    public boolean isInStock(String skuCode);
+    public List<InventoryResponse> isInStock(List<String> skuCode);
 }

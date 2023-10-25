@@ -21,7 +21,7 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/")
-    public String placeOrder(@RequestBody OrderRequest orderRequest){
+    public String placeOrder(@RequestBody OrderRequest orderRequest) throws IllegalAccessException {
 
         log.info("request in controller : " + orderRequest.toString());
         this.orderService.placeOrder(orderRequest);
