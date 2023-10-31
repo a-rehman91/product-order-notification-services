@@ -1,5 +1,6 @@
 package com.ms.order.service.services.impl;
 
+import com.ms.order.service.configurations.AppConstants;
 import com.ms.order.service.dto.InventoryResponse;
 import com.ms.order.service.dto.OrderLineItemsDto;
 import com.ms.order.service.dto.OrderRequest;
@@ -30,7 +31,7 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private ModelMapper modelMapper;
     @Autowired
-    private WebClient webClient;
+    private WebClient.Builder webClientBuilder;
 
     @Override
     public void placeOrder(OrderRequest orderRequest) throws IllegalAccessException {
@@ -55,12 +56,15 @@ public class OrderServiceImpl implements OrderService {
 
         //Call inventory service, and place order if product is in stock.
 
-        InventoryResponse[] inventoryResponses = this.webClient.get()
-                .uri("http://localhost:8068/api/v1/inventory",
+        InventoryResponse[] inventoryResponses = this.webClientBuilder.build()
+                .get()
+                .uri("http://" + AppConstants.INVENTORY_SERVICE + "/" + AppConstants.API + "/"+ AppConstants.APP_VERSION + "/" + AppConstants.INVENTORY_BASE_URL,
                         uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
                 .retrieve()
                 .bodyToMono(InventoryResponse[].class)
                 .block();
+
+        List<InventoryResponse> list = Arrays.stream(inventoryResponses).toList();
 
         boolean allProductsInStock = Arrays.stream(inventoryResponses).allMatch(InventoryResponse::isInStock);
 
