@@ -1,8 +1,9 @@
 package com.ms.order.service.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.ms.order.service.dto.OrderRequest;
 
 public interface OrderService {
 
-    void placeOrder(OrderRequest orderRequest) throws IllegalAccessException;
+    String placeOrder(OrderRequest orderRequest) throws IllegalAccessException, JsonProcessingException;
 }

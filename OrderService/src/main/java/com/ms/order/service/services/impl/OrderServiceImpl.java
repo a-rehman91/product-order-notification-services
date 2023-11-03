@@ -1,9 +1,12 @@
 package com.ms.order.service.services.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ms.order.service.configurations.AppConstants;
 import com.ms.order.service.dto.InventoryResponse;
 import com.ms.order.service.dto.OrderLineItemsDto;
 import com.ms.order.service.dto.OrderRequest;
+import com.ms.order.service.event.OrderPlacedEvent;
 import com.ms.order.service.model.Order;
 import com.ms.order.service.model.OrderLineItems;
 import com.ms.order.service.repositories.OrderRepository;
@@ -12,6 +15,9 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -32,9 +38,11 @@ public class OrderServiceImpl implements OrderService {
     private ModelMapper modelMapper;
     @Autowired
     private WebClient.Builder webClientBuilder;
+    @Autowired
+    private KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
     @Override
-    public void placeOrder(OrderRequest orderRequest) throws IllegalAccessException {
+    public String placeOrder(OrderRequest orderRequest) throws IllegalAccessException, JsonProcessingException {
 
         String orderId = UUID.randomUUID().toString();
 
@@ -68,8 +76,19 @@ public class OrderServiceImpl implements OrderService {
 
         boolean allProductsInStock = Arrays.stream(inventoryResponses).allMatch(InventoryResponse::isInStock);
 
-        if(allProductsInStock)
-            this.orderRepository.save(order);
+        if(allProductsInStock){
+
+            Order orderPlaced = this.orderRepository.save(order);
+            String jsonOrderPlaced = new ObjectMapper().writeValueAsString(orderPlaced);
+
+            Message<String> message = MessageBuilder.withPayload(jsonOrderPlaced)
+                    .setHeader("notification-order-topic", new OrderPlacedEvent(order.getOrderNumber()))
+                    .build();
+
+            this.kafkaTemplate.send(message);
+            log.info("Order placed sucessfully");
+            return "Order placed sucessfully";
+        }
         else
             throw new IllegalAccessException("Product is not in stock, please try again later.");
 
